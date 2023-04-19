@@ -35,7 +35,7 @@ async def unicorn_exception_handler(request: Request, exc: UrsaException):
 
 @app.get("/jobs", response_model=List[schemas.Job])
 def jobs_get():
-    return JobService.get_jobs()
+    return {"data": JobService.get_jobs()}
 
 
 @app.get("/job/{job_id}", response_model=schemas.Job)
@@ -43,12 +43,12 @@ def job_get(job_id: int):
     job = JobService.get_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="User not found")
-    return job
+    return {"data": job}
 
 
 @app.post("/job")
 def job_create(job: schemas.JobCreate):
-    return JobService.create_job(job)
+    return {"data": JobService.create_job(job)}
 
 
 @app.put("/job")

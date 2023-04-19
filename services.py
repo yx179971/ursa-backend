@@ -54,3 +54,4 @@ class JobService:
     @classmethod
     def delete_job(cls, job_id):
         db.delete(cls.get_job(job_id))
+        db.commit()
