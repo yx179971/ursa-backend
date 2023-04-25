@@ -1,10 +1,11 @@
-from typing import List
+import functools
 
 import uvicorn
 from fastapi import FastAPI, UploadFile, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+import conf
 from services import JobService
 import models
 import schemas
@@ -14,6 +15,15 @@ from utils.exception import UrsaException
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+
+def log_request_body_middleware(app):
+    async def wrapped_app(scope, receive, send):
+        await Request(scope, receive).body()
+        await app(scope, receive, send)
+
+    return wrapped_app
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,6 +35,16 @@ app.add_middleware(
 )
 
 
+# todo: 记录请求体，由于fastapi的request在不同scope中只能有一次读取body，所以会hang住
+# @app.middleware("http")
+# async def log_request_body(request: Request, call_next):
+#     response = await call_next(request)
+#     if conf.debug and request.method != "OPTIONS":
+#         body = (await request.body())
+#         # print(f"request body: {body}")
+#     return response
+
+
 @app.exception_handler(UrsaException)
 async def unicorn_exception_handler(request: Request, exc: UrsaException):
     return JSONResponse(
@@ -33,12 +53,12 @@ async def unicorn_exception_handler(request: Request, exc: UrsaException):
     )
 
 
-@app.get("/jobs", response_model=List[schemas.Job])
+@app.get("/jobs", response_model=schemas.JobListResponse)
 def jobs_get():
     return {"data": JobService.get_jobs()}
 
 
-@app.get("/job/{job_id}", response_model=schemas.Job)
+@app.get("/job/{job_id}", response_model=schemas.JobResponse)
 def job_get(job_id: int):
     job = JobService.get_job(job_id)
     if job is None:
@@ -46,17 +66,17 @@ def job_get(job_id: int):
     return {"data": job}
 
 
-@app.post("/job")
-def job_create(job: schemas.JobCreate):
+@app.post("/job", response_model=schemas.JobResponse)
+async def job_create(job: schemas.JobCreate):
     return {"data": JobService.create_job(job)}
 
 
-@app.put("/job")
+@app.put("/job/{job_id}", response_model=schemas.JobResponse)
 def job_update(job: schemas.Job):
-    return JobService.update_job(job)
+    return {"data": JobService.update_job(job)}
 
 
-@app.delete("/job/{job_id}")
+@app.delete("/job/{job_id}", response_model=schemas.SuccessResponse)
 def job_delete(job_id: int):
     JobService.delete_job(job_id)
     return {"success": True}
@@ -83,5 +103,7 @@ def worker_keepalive():
     return {"success": True}
 
 
+# app = log_request_body_middleware(app)
 if __name__ == '__main__':
+    conf.debug = True
     uvicorn.run(app, host="0.0.0.0")

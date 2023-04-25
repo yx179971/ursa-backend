@@ -17,3 +17,15 @@ class Job(JobBase):
 
     class Config:
         orm_mode = True
+
+
+class JobResponse(BaseModel):
+    data: Job
+
+
+class JobListResponse(BaseModel):
+    data: List[Job]
+
+
+class SuccessResponse(BaseModel):
+    success: bool = True

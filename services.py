@@ -4,6 +4,7 @@ import shutil
 import json
 
 from fastapi import UploadFile
+from sqlalchemy import update
 
 import models
 import schemas
@@ -46,9 +47,10 @@ class JobService:
     @classmethod
     def update_job(cls, job: schemas.Job):
         job = cls._job_maker(job)
-        db.bulk_update_mappings(models.Job, job)
+        db.execute(update(models.Job)
+                   .where(models.Job.id == job.id)
+                   .values(config=job.config))
         db.commit()
-        db.refresh()
         return cls.get_job(job.id)
 
     @classmethod

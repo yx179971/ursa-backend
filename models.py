@@ -10,3 +10,14 @@ class Job(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     config = Column(JSON, default=dict)
+
+
+class Node(Base):
+    __abstract__ = True
+    id = Column(String)
+    img_url = Column(String)
+
+
+class Edge(Base):
+    __abstract__ = True
+    id = Column(String)
