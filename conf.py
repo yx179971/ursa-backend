@@ -1,18 +1,18 @@
 import os
-
-from typing import Dict, Any
+from typing import Any
+from typing import Dict
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import sessionmaker
 
 debug = False
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 img_dir = os.path.join(base_dir, "img")
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{base_dir}/sql_app.db"
 # SQLALCHEMY_DATABASE_URL = "postgresql://user:password@postgresserver/db"
 
 engine = create_engine(

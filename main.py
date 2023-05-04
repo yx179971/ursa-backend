@@ -1,20 +1,22 @@
-import functools
-
-import uvicorn
-from fastapi import FastAPI, UploadFile, HTTPException, Request
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-
 import conf
-from services import JobService
+from conf import engine
+from fastapi import FastAPI
+from fastapi import HTTPException
+from fastapi import Request
+from fastapi import UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 import models
 import schemas
-from conf import engine
+from services import JobService
 from utils.exception import UrsaException
+import uvicorn
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+app.mount("/img", StaticFiles(directory="img"), name="img")
 
 
 def log_request_body_middleware(app):
@@ -82,8 +84,9 @@ def job_delete(job_id: int):
     return {"success": True}
 
 
-@app.post("/job/run")
-def job_run():
+@app.post("/job/run/{job_id}", response_model=schemas.SuccessResponse)
+def job_run(job_id: int):
+    JobService.run(job_id)
     return {"success": True}
 
 
@@ -95,7 +98,7 @@ def job_stop():
 @app.post("/uploadfile")
 async def upload_file(file: UploadFile):
     file_path = JobService.save_file(file)
-    return {"file_path": file_path}
+    return {"data": {"file_path": file_path}}
 
 
 @app.post("/worker/keepalive")
@@ -104,6 +107,6 @@ def worker_keepalive():
 
 
 # app = log_request_body_middleware(app)
-if __name__ == '__main__':
+if __name__ == "__main__":
     conf.debug = True
     uvicorn.run(app, host="0.0.0.0")

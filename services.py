@@ -1,15 +1,14 @@
 import os
-import uuid
 import shutil
-import json
+import uuid
 
-from fastapi import UploadFile
-from sqlalchemy import update
-
-import models
-import schemas
 import conf
 from conf import db
+from fastapi import UploadFile
+import models
+from mq import tasks
+import schemas
+from sqlalchemy import update
 from utils.exception import UrsaException
 
 
@@ -47,9 +46,9 @@ class JobService:
     @classmethod
     def update_job(cls, job: schemas.Job):
         job = cls._job_maker(job)
-        db.execute(update(models.Job)
-                   .where(models.Job.id == job.id)
-                   .values(config=job.config))
+        db.execute(
+            update(models.Job).where(models.Job.id == job.id).values(config=job.config)
+        )
         db.commit()
         return cls.get_job(job.id)
 
@@ -57,3 +56,7 @@ class JobService:
     def delete_job(cls, job_id):
         db.delete(cls.get_job(job_id))
         db.commit()
+
+    @classmethod
+    def run(cls, job_id):
+        tasks.job_run.delay(job_id)

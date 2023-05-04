@@ -1,7 +1,9 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, JSON
-from sqlalchemy.orm import relationship
-
 from conf import Base
+from sqlalchemy import Column
+from sqlalchemy import Float
+from sqlalchemy import Integer
+from sqlalchemy import JSON
+from sqlalchemy import String
 
 
 class Job(Base):
@@ -15,9 +17,16 @@ class Job(Base):
 class Node(Base):
     __abstract__ = True
     id = Column(String)
+    name = Column(String)
     img_url = Column(String)
+    accuracy = Column(Float)
+    position = Column(JSON)
+    interval = Column(Integer)
+    action = Column(String)
 
 
 class Edge(Base):
     __abstract__ = True
     id = Column(String)
+    source = Column(String)
+    target = Column(String)
