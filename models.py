@@ -1,9 +1,35 @@
+from enum import auto
+from enum import Enum
+
 from conf import Base
 from sqlalchemy import Column
-from sqlalchemy import Float
+from sqlalchemy import DateTime
 from sqlalchemy import Integer
 from sqlalchemy import JSON
 from sqlalchemy import String
+
+
+class MqSignal(Enum):
+    def _generate_next_value_(name, start, count, last_values):
+        return name
+
+    running = auto()
+    stopping = auto()
+    cancel = auto()
+
+
+class MqStatus(Enum):
+    def _generate_next_value_(name, start, count, last_values):
+        return name
+
+    running = auto()
+    stopping = auto()
+    stopped = auto()
+    finish = auto()
+    failure = auto()
+
+    def end_set(self):
+        return {self.stopped.name, self.finish.name, self.failure.name}
 
 
 class Job(Base):
@@ -12,21 +38,14 @@ class Job(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     config = Column(JSON, default=dict)
+    sort = Column(Integer, default=0)
 
 
-class Node(Base):
-    __abstract__ = True
-    id = Column(String)
-    name = Column(String)
-    img_url = Column(String)
-    accuracy = Column(Float)
-    position = Column(JSON)
-    interval = Column(Integer)
-    action = Column(String)
+class JobLog(Base):
+    __tablename__ = "job_log"
 
-
-class Edge(Base):
-    __abstract__ = True
-    id = Column(String)
-    source = Column(String)
-    target = Column(String)
+    id = Column(Integer, primary_key=True, index=True)
+    uuid = Column(String, index=True)
+    job_id = Column(Integer, index=True)
+    node_id = Column(String)
+    create_time = Column(DateTime)

@@ -1,3 +1,6 @@
+import json
+import logging
+
 import conf
 from conf import engine
 from fastapi import FastAPI
@@ -60,6 +63,12 @@ def jobs_get():
     return {"data": JobService.get_jobs()}
 
 
+@app.post("/jobs/sort", response_model=schemas.SuccessResponse)
+def jobs_get(data: schemas.JobListRequest):
+    JobService.sort_jobs(data.data)
+    return {"success": True}
+
+
 @app.get("/job/{job_id}", response_model=schemas.JobResponse)
 def job_get(job_id: int):
     job = JobService.get_job(job_id)
@@ -85,18 +94,33 @@ def job_delete(job_id: int):
 
 
 @app.post("/job/run/{job_id}", response_model=schemas.SuccessResponse)
-def job_run(job_id: int):
-    JobService.run(job_id)
+def job_run(job_id: int, force: bool = False):
+    JobService.run(job_id, force)
     return {"success": True}
 
 
-@app.post("/job/stop")
-def job_stop():
+@app.post("/job/stop/{job_id}", response_model=schemas.SuccessResponse)
+def job_stop(job_id: int):
+    JobService.stop(job_id)
     return {"success": True}
+
+
+@app.post("/record/start/{job_id}", response_model=schemas.SuccessResponse)
+def record_start(job_id: int, force: bool = False):
+    JobService.record_start(job_id, force)
+    return {"success": True}
+
+
+@app.post("/record/stop/{job_id}", response_model=schemas.SuccessResponse)
+def record_stop(job_id: int):
+    JobService.record_stop()
+    with open(conf.data_path) as f:
+        data = json.load(f)
+    return JSONResponse(data)
 
 
 @app.post("/uploadfile")
-async def upload_file(file: UploadFile):
+async def upload_file(file: UploadFile):  # todo: async
     file_path = JobService.save_file(file)
     return {"data": {"file_path": file_path}}
 
@@ -109,4 +133,7 @@ def worker_keepalive():
 # app = log_request_body_middleware(app)
 if __name__ == "__main__":
     conf.debug = True
-    uvicorn.run(app, host="0.0.0.0")
+    # todo: 清除无用图片和JobLog
+    uvicorn.run(
+        app, host="0.0.0.0", log_config=conf.LOGGING_CONFIG, log_level=logging.DEBUG
+    )

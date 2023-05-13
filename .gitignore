@@ -161,3 +161,5 @@ cython_debug/
 img/
 *.iml
 *.db
+*.json
+test.py

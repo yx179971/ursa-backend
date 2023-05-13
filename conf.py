@@ -7,10 +7,18 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import sessionmaker
 
-debug = False
+debug = True
+mq_debug = False
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 img_dir = os.path.join(base_dir, "img")
+data_path = os.path.join(base_dir, "data.json")
+
+REDIS_HOST = "192.168.31.112"
+REDIS_PORT = 6379
+
+window = "MuMu模拟器"
+accuracy = 0.8
 
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{base_dir}/sql_app.db"
 # SQLALCHEMY_DATABASE_URL = "postgresql://user:password@postgresserver/db"
@@ -33,19 +41,18 @@ def get_db() -> Session:
 
 db: Session = SessionLocal()
 
-
 LOGGING_CONFIG: Dict[str, Any] = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "default": {
             "()": "uvicorn.logging.DefaultFormatter",
-            "fmt": "%(levelprefix)s %(message)s",
+            "fmt": "%(asctime)s - %(levelprefix)s %(message)s",
             "use_colors": None,
         },
         "access": {
             "()": "uvicorn.logging.AccessFormatter",
-            "fmt": '%(levelprefix)s %(client_addr)s - "%(request_line)s" %(status_code)s',  # noqa: E501
+            "fmt": '%(asctime)s - %(levelprefix)s %(client_addr)s - "%(request_line)s" %(status_code)s',  # noqa: E501
         },
     },
     "handlers": {

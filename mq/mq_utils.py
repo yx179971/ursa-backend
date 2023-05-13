@@ -2,6 +2,7 @@ import json
 import os
 import time
 
+import conf
 import pyautogui as gui
 
 try:
@@ -10,18 +11,15 @@ except:
     pass
 
 
-def get_window(include="MuMu模拟器"):
+def get_window(include=conf.window):
     return next(filter(lambda x: include in x.title, gui.getAllWindows()))
 
 
-try:
-    mumu = get_window()
-except:
-    pass
+window = get_window()
 
 
 def screen_shot(save_path=""):
-    im = gui.screenshot(region=(mumu.left, mumu.top, mumu.width, mumu.height))
+    im = gui.screenshot(region=(window.left, window.top, window.width, window.height))
     if save_path:
         im.save(save_path)
     return im
