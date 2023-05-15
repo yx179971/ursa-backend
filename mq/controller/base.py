@@ -17,5 +17,10 @@ class Executor:
         if hasattr(self, "node_track"):
             redis_utils.set_mq(
                 "node_track",
-                "->".join([f"{node.job_id}/{node.name}" for node in self.node_track]),
+                "->".join(
+                    [
+                        f"{node.context['job_id']}/{node.name}"
+                        for node in self.node_track
+                    ]
+                ),
             )

@@ -61,11 +61,13 @@ class NodeType(Enum):
     job = auto()
     operation = auto()
     start = auto()
+    virtual = auto()
 
 
 class Node(BaseModel):
     id: str
     name: str
+    enable: bool = True
     action: Optional[Action]
     rank: Optional[int]
     exec_count: Optional[int]
@@ -80,6 +82,7 @@ class Node(BaseModel):
     delay: Optional[int]
     type: NodeType = NodeType.operation
     job_id: Optional[int]
+    context: Optional[Dict]
 
 
 class Edge(BaseModel):
@@ -93,3 +96,8 @@ class Mq(BaseModel):
     node_id: Optional[str]
     status: Optional[MqStatus]
     signal: Optional[MqSignal]
+    node_track: Optional[str]
+
+
+class MqResponse(BaseModel):
+    data: Mq

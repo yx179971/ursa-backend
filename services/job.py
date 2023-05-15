@@ -1,3 +1,4 @@
+from collections import Counter
 import os
 import shutil
 import time
@@ -32,7 +33,7 @@ class JobService:
     def sort_jobs(cls, data):
         db.execute(
             update(models.Job),
-            [{"id": job.id, "sort": sort} for sort, job in enumerate(data)],
+            [{"id": job.id, "sort": sort} for sort, job in enumerate(data, start=1)],
         )
         db.commit()
 
@@ -108,3 +109,13 @@ class JobService:
             if redis_utils.get_mq().status == models.MqStatus.finish:
                 break
             time.sleep(1)
+
+    @classmethod
+    def stat(cls):
+        stat = {}
+        for job in db.query(models.Job).all():
+            stat[job.name] = Counter(
+                ["shape"] == "edge" for d in job.config.get("cells")
+            )[False]
+        for k, v in stat.items():
+            print(f"{k}: {v}")

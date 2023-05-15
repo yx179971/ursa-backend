@@ -12,7 +12,9 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 import models
 import schemas
+from services import CleanService
 from services import JobService
+from utils import redis_utils
 from utils.exception import UrsaException
 import uvicorn
 
@@ -105,6 +107,11 @@ def job_stop(job_id: int):
     return {"success": True}
 
 
+@app.get("/mq/status", response_model=schemas.MqResponse)
+def job_stop():
+    return {"data": redis_utils.get_mq()}
+
+
 @app.post("/record/start/{job_id}", response_model=schemas.SuccessResponse)
 def record_start(job_id: int, force: bool = False):
     JobService.record_start(job_id, force)
@@ -134,6 +141,8 @@ def worker_keepalive():
 if __name__ == "__main__":
     conf.debug = True
     # todo: 清除无用图片和JobLog
+    CleanService.clean_img()
+    JobService.stat()
     uvicorn.run(
         app, host="0.0.0.0", log_config=conf.LOGGING_CONFIG, log_level=logging.DEBUG
     )

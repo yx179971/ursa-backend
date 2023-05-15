@@ -76,6 +76,7 @@ class Controller(Executor):
             data["id"] = node["id"]
             data["name"] = node["attrs"]["text"]["text"]
             data["rank"] = node["attrs"].get("rank", {}).get("text")
+            data["context"] = {"job_id": self.job_id}
             nodes.append(schemas.Node(**{k: v for k, v in data.items() if v}))
         edges = [
             schemas.Edge(
@@ -210,9 +211,8 @@ class Controller(Executor):
             cv2.circle(display, (x, y), 10, (0, 0, 255), 3)
 
             x, y = int(x), int(y)
-            if (
-                rect
-                and rect["x"] < x < rect["x"] + rect["w"]
+            if rect and not (
+                rect["x"] < x < rect["x"] + rect["w"]
                 and rect["y"] < y < rect["h"] + rect["y"]
             ):
                 continue
@@ -256,7 +256,7 @@ class Controller(Executor):
         wanted = self.templates[target]
         size = wanted[0].shape
         h, w, _ = size
-        pts = self.locate(target, rect)
+        pts = self.locate(target, rect=rect)
         if pts:
             xx = pts[0]
             x, y = self.random_offset(xx, w, h)
@@ -290,11 +290,18 @@ class Controller(Executor):
 
     def get_start_node(self):
         nodes = list(
-            filter(lambda node: node.type == schemas.NodeType.start, self.nodes)
+            filter(
+                lambda node: node.type == schemas.NodeType.start and node.enable,
+                self.nodes,
+            )
         )
         if not nodes:
             all_target = set(edge.target for edge in self.edges)
-            nodes = list(filter(lambda x: x.id not in all_target, self.nodes))
+            nodes = list(
+                filter(
+                    lambda node: node.id not in all_target and node.enable, self.nodes
+                )
+            )
         if len(nodes) != 1:
             raise Exception("只能有一个起点")
         else:
@@ -316,10 +323,11 @@ class Controller(Executor):
         return True
 
     def act_click_locate(self, node):
-        return self.click(node.locate)
+        # todo: 优化二次定位
+        return self.click(node.locate, rect=node.locate_rect)
 
     def act_click_target(self, node):
-        return self.click(node.target, rect=node.locate_rect)
+        return self.click(node.target)
 
     def node_check(self, node):
         if not node.locate:
@@ -341,7 +349,7 @@ class Controller(Executor):
             edge.target for edge in filter(lambda x: x.source == node.id, self.edges)
         )
         for n in self.nodes:
-            if n.id not in next_ids:
+            if n.id not in next_ids or not n.enable:
                 continue
             if n.exec_count:
                 exec_count = (
@@ -357,7 +365,7 @@ class Controller(Executor):
                     continue
             next_nodes.append(n)
         next_nodes.sort(key=lambda x: x.rank or 0, reverse=True)
-        if next_nodes:
+        if next_nodes and node.type == schemas.NodeType.operation:
             # 有后续节点才需要重试
             next_nodes.insert(0, node)
         return next_nodes
@@ -371,8 +379,11 @@ class Controller(Executor):
                 time.sleep(1)
                 continue
             # 先执行右侧队尾
+            if self.node_track:
+                self.node_track.pop()
             node = q.pop()
-
+            # todo: 假死报警
+            self.node_track.append(node)
             logging.info(node.name)
 
             if node.type == schemas.NodeType.job:
