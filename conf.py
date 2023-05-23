@@ -14,7 +14,8 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 img_dir = os.path.join(base_dir, "img")
 data_path = os.path.join(base_dir, "data.json")
 
-REDIS_HOST = "192.168.31.112"
+REDIS_HOST = "127.0.0.1"
+# REDIS_HOST = "192.168.31.112"
 REDIS_PORT = 6379
 
 window = "MuMu模拟器"

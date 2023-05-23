@@ -96,8 +96,8 @@ def job_delete(job_id: int):
 
 
 @app.post("/job/run/{job_id}", response_model=schemas.SuccessResponse)
-def job_run(job_id: int, force: bool = False):
-    JobService.run(job_id, force)
+def job_run(job_id: int, body: schemas.JobRunRequest):
+    JobService.run(job_id, body.force, body.node_id or "")
     return {"success": True}
 
 

@@ -38,6 +38,11 @@ class JobListRequest(BaseModel):
     data: List[Job]
 
 
+class JobRunRequest(BaseModel):
+    node_id: Optional[str]
+    force: bool = False
+
+
 class SuccessResponse(BaseModel):
     success: bool = True
 

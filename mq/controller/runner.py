@@ -36,10 +36,17 @@ class Timer:
 
 class Controller(Executor):
     def __init__(
-        self, job_id, uuid_=None, interval=1, interval_floating=0.5, node_track=None
+        self,
+        job_id,
+        uuid_=None,
+        interval=1,
+        interval_floating=0.5,
+        node_track=None,
+        start_node_id="",
     ):
         self.uuid = uuid_ or uuid.uuid4().hex
         self.job_id = job_id
+        self.start_node_id = start_node_id
         self.nodes, self.edges = self.get_node_config(job_id)
         work_dir = os.path.dirname(os.path.abspath(__file__))
         self.save_path = os.path.join(work_dir, "screenshots")
@@ -77,7 +84,9 @@ class Controller(Executor):
             data["name"] = node["attrs"]["text"]["text"]
             data["rank"] = node["attrs"].get("rank", {}).get("text")
             data["context"] = {"job_id": self.job_id}
-            nodes.append(schemas.Node(**{k: v for k, v in data.items() if v}))
+            nodes.append(
+                schemas.Node(**{k: v for k, v in data.items() if v is False or v})
+            )
         edges = [
             schemas.Edge(
                 id=edge["id"],
@@ -189,9 +198,6 @@ class Controller(Executor):
 
     def locate(self, target, double=False, double_sleep=1, show=False, rect=None):
         self.stop_check()
-        logging.info(
-            f"检测目标:{target}",
-        )
         wanted = self.templates[target]
         loc_pos = []
         wanted, threshold = wanted
@@ -222,7 +228,7 @@ class Controller(Executor):
             self.show_window(f"we {'' if loc_pos else 'not'} get", display)
 
         if loc_pos:
-            logging.debug(f"Y 已找到目标 {target}")
+            logging.info(f"Y 已找到目标 {target}")
         else:
             logging.warning(
                 f"N 未找到目标 {target}",
@@ -289,12 +295,20 @@ class Controller(Executor):
             pass
 
     def get_start_node(self):
-        nodes = list(
-            filter(
-                lambda node: node.type == schemas.NodeType.start and node.enable,
-                self.nodes,
+        if self.start_node_id:
+            nodes = list(
+                filter(
+                    lambda node: node.id == self.start_node_id,
+                    self.nodes,
+                )
             )
-        )
+        else:
+            nodes = list(
+                filter(
+                    lambda node: node.type == schemas.NodeType.start and node.enable,
+                    self.nodes,
+                )
+            )
         if not nodes:
             all_target = set(edge.target for edge in self.edges)
             nodes = list(
@@ -302,8 +316,10 @@ class Controller(Executor):
                     lambda node: node.id not in all_target and node.enable, self.nodes
                 )
             )
-        if len(nodes) != 1:
+        if len(nodes) > 1:
             raise Exception("只能有一个起点")
+        elif not nodes:
+            raise Exception(f"未知的节点id: {self.start_node_id}")
         else:
             return nodes[0]
 
@@ -397,7 +413,8 @@ class Controller(Executor):
                 self.cap()
                 if not self.locate(node.locate, rect=node.locate_rect):
                     q.appendleft(node)
-                    self.delay()
+                    if len(q) == 1:
+                        self.delay()
                     continue
 
                 if node.action != Action.pass_:

@@ -19,10 +19,10 @@ def reset_redis_status(*args, **kwargs):
 
 
 @app.task
-def job_run(job_id):
+def job_run(job_id, node_id=""):
     redis_utils.set_mq("job_id", job_id)
     try:
-        Controller(job_id).loop()
+        Controller(job_id, start_node_id=node_id).loop()
     except (BreakException, CancelException):
         redis_utils.set_mq("status", models.MqStatus.stopped.value)
     except Exception as e:

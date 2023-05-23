@@ -89,9 +89,9 @@ class JobService:
         redis_utils.set_mq("status", models.MqStatus.running.name)
 
     @classmethod
-    def run(cls, job_id, force=False):
+    def run(cls, job_id, force=False, node_id=""):
         cls.init_mq(force)
-        tasks.job_run.delay(job_id)
+        tasks.job_run.delay(job_id, node_id)
 
     @classmethod
     def stop(cls, job_id):
