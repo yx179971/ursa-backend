@@ -98,6 +98,10 @@ class JobService:
         redis_utils.set_mq("signal", models.MqSignal.stopping.name)
 
     @classmethod
+    def pause(cls, job_id):
+        redis_utils.set_mq("signal", models.MqSignal.pause.name)
+
+    @classmethod
     def record_start(cls, job_id, force=False):
         cls.init_mq(force)
         tasks.record_start.delay(job_id)

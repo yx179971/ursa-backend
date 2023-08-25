@@ -101,6 +101,12 @@ def job_run(job_id: int, body: schemas.JobRunRequest):
     return {"success": True}
 
 
+@app.post("/job/pause/{job_id}", response_model=schemas.SuccessResponse)
+def job_pause(job_id: int):
+    JobService.pause(job_id)
+    return {"success": True}
+
+
 @app.post("/job/stop/{job_id}", response_model=schemas.SuccessResponse)
 def job_stop(job_id: int):
     JobService.stop(job_id)
