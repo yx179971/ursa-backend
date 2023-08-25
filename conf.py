@@ -12,6 +12,7 @@ mq_debug = False
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 img_dir = os.path.join(base_dir, "img")
+os.makedirs(img_dir, exist_ok=True)
 data_path = os.path.join(base_dir, "data.json")
 
 REDIS_HOST = "127.0.0.1"

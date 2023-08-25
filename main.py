@@ -21,7 +21,7 @@ import uvicorn
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-app.mount("/img", StaticFiles(directory="img"), name="img")
+app.mount("/img", StaticFiles(directory=conf.img_dir), name="img")
 
 
 def log_request_body_middleware(app):
@@ -98,6 +98,12 @@ def job_delete(job_id: int):
 @app.post("/job/run/{job_id}", response_model=schemas.SuccessResponse)
 def job_run(job_id: int, body: schemas.JobRunRequest):
     JobService.run(job_id, body.force, body.node_id or "")
+    return {"success": True}
+
+
+@app.post("/job/pause/{job_id}", response_model=schemas.SuccessResponse)
+def job_pause(job_id: int):
+    JobService.pause(job_id)
     return {"success": True}
 
 

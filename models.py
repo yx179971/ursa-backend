@@ -15,6 +15,7 @@ class MqSignal(Enum):
 
     running = auto()
     stopping = auto()
+    pause = auto()
     cancel = auto()
 
 
@@ -23,6 +24,7 @@ class MqStatus(Enum):
         return name
 
     running = auto()
+    pause = auto()
     stopping = auto()
     stopped = auto()
     finish = auto()
