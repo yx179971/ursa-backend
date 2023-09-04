@@ -61,18 +61,18 @@ async def unicorn_exception_handler(request: Request, exc: UrsaException):
 
 
 @app.get("/jobs", response_model=schemas.JobListResponse)
-def jobs_get():
+async def jobs_get():
     return {"data": JobService.get_jobs()}
 
 
 @app.post("/jobs/sort", response_model=schemas.SuccessResponse)
-def jobs_get(data: schemas.JobListRequest):
+async def jobs_sort(data: schemas.JobListRequest):
     JobService.sort_jobs(data.data)
     return {"success": True}
 
 
 @app.get("/job/{job_id}", response_model=schemas.JobResponse)
-def job_get(job_id: int):
+async def job_get(job_id: int):
     job = JobService.get_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -85,47 +85,53 @@ async def job_create(job: schemas.JobCreate):
 
 
 @app.put("/job/{job_id}", response_model=schemas.JobResponse)
-def job_update(job: schemas.Job):
+async def job_update(job: schemas.Job):
     return {"data": JobService.update_job(job)}
 
 
 @app.delete("/job/{job_id}", response_model=schemas.SuccessResponse)
-def job_delete(job_id: int):
+async def job_delete(job_id: int):
     JobService.delete_job(job_id)
     return {"success": True}
 
 
 @app.post("/job/run/{job_id}", response_model=schemas.SuccessResponse)
-def job_run(job_id: int, body: schemas.JobRunRequest):
+async def job_run(job_id: int, body: schemas.JobRunRequest):
     JobService.run(job_id, body.force, body.node_id or "")
     return {"success": True}
 
 
 @app.post("/job/pause/{job_id}", response_model=schemas.SuccessResponse)
-def job_pause(job_id: int):
+async def job_pause(job_id: int):
     JobService.pause(job_id)
     return {"success": True}
 
 
+@app.post("/job/continue/{job_id}", response_model=schemas.SuccessResponse)
+async def job_continue(job_id: int):
+    JobService.continue_(job_id)
+    return {"success": True}
+
+
 @app.post("/job/stop/{job_id}", response_model=schemas.SuccessResponse)
-def job_stop(job_id: int):
+async def job_stop(job_id: int):
     JobService.stop(job_id)
     return {"success": True}
 
 
 @app.get("/mq/status", response_model=schemas.MqResponse)
-def job_stop():
+async def job_status():
     return {"data": redis_utils.get_mq()}
 
 
 @app.post("/record/start/{job_id}", response_model=schemas.SuccessResponse)
-def record_start(job_id: int, force: bool = False):
+async def record_start(job_id: int, force: bool = False):
     JobService.record_start(job_id, force)
     return {"success": True}
 
 
 @app.post("/record/stop/{job_id}", response_model=schemas.SuccessResponse)
-def record_stop(job_id: int):
+async def record_stop(job_id: int):
     JobService.record_stop()
     with open(conf.data_path) as f:
         data = json.load(f)
@@ -133,13 +139,13 @@ def record_stop(job_id: int):
 
 
 @app.post("/uploadfile")
-async def upload_file(file: UploadFile):  # todo: async
+async def upload_file(file: UploadFile):
     file_path = JobService.save_file(file)
     return {"data": {"file_path": file_path}}
 
 
 @app.post("/worker/keepalive")
-def worker_keepalive():
+async def worker_keepalive():
     return {"success": True}
 
 

@@ -8,11 +8,14 @@ from utils.exception import CancelException
 
 
 class Executor:
-    def check_signal(self):
+    @staticmethod
+    def check_signal():
         while True:
             signal = redis_utils.get_mq().signal
             logging.info(f"signal-----------------{signal.name}")
-            if signal == models.MqSignal.stopping:
+            if signal == models.MqSignal.running:
+                redis_utils.set_mq("status", models.MqStatus.running.name)
+            elif signal == models.MqSignal.stopping:
                 redis_utils.set_mq("status", models.MqStatus.stopping.name)
                 raise BreakException
             elif signal == models.MqSignal.cancel:
@@ -22,14 +25,4 @@ class Executor:
                 redis_utils.set_mq("status", models.MqStatus.pause.name)
                 time.sleep(1)
                 continue
-            if hasattr(self, "node_track"):
-                redis_utils.set_mq(
-                    "node_track",
-                    "->".join(
-                        [
-                            f"{node.context['job_id']}/{node.name}"
-                            for node in self.node_track
-                        ]
-                    ),
-                )
             break

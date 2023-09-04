@@ -19,6 +19,7 @@ import numpy as np
 import pyautogui as gui
 import schemas
 from schemas import Action
+from utils import redis_utils
 
 from .base import Executor
 
@@ -45,7 +46,14 @@ class Controller(Executor):
         start_node_id="",
     ):
         self.uuid = uuid_ or uuid.uuid4().hex
-        self.job_id = job_id
+        job = db.query(models.Job).filter(models.Job.id == job_id).first().get()
+        self.job = models.Job(
+            **{
+                k: v
+                for k, v in job.__dict__.items()
+                if k in models.Job.__mapper__.c.keys()
+            }
+        )
         self.start_node_id = start_node_id
         self.nodes, self.edges = self.get_node_config(job_id)
         work_dir = os.path.dirname(os.path.abspath(__file__))
@@ -83,7 +91,7 @@ class Controller(Executor):
             data["id"] = node["id"]
             data["name"] = node["attrs"]["text"]["text"]
             data["rank"] = node["attrs"].get("rank", {}).get("text")
-            data["context"] = {"job_id": self.job_id}
+            data["context"] = {"job_id": self.job.id}
             nodes.append(
                 schemas.Node(**{k: v for k, v in data.items() if v is False or v})
             )
@@ -352,12 +360,21 @@ class Controller(Executor):
     def log_node(self, node):
         job = models.JobLog(
             uuid=self.uuid,
-            job_id=self.job_id,
+            job_id=self.job.id,
             node_id=node.id,
             create_time=datetime.now(),
         )
         db.add(job)
         db.commit()
+
+    def check_reload(self):
+        job = db.query(models.Job).filter(models.Job.id == self.job.id).first()
+        logging.info(job.map_signature)
+        logging.info(self.job.map_signature)
+        if job.map_signature != self.job.map_signature:
+            self.job = job.get()
+            self.nodes, self.edges = self.get_node_config(self.job.id)
+        redis_utils.set_mq("signal", models.MqSignal.running)
 
     def get_next_nodes(self, node):
         next_nodes = []
@@ -372,7 +389,7 @@ class Controller(Executor):
                     db.query(models.JobLog)
                     .filter(
                         models.JobLog.uuid == self.uuid,
-                        models.JobLog.job_id == self.job_id,
+                        models.JobLog.job_id == self.job.id,
                         models.JobLog.node_id == n.id,
                     )
                     .count()
@@ -386,24 +403,36 @@ class Controller(Executor):
             next_nodes.insert(0, node)
         return next_nodes
 
-    def loop(self):
-        q = deque([self.get_start_node()])
+    def set_node_track(self):
+        redis_utils.set_mq(
+            "node_track",
+            "->".join(
+                [f"{node.context['job_id']}/{node.name}" for node in self.node_track]
+            ),
+        )
 
-        while q:
+    def loop(self):
+        node = self.get_start_node()
+
+        while True:
             self.check_signal()
             if not self.window.isActive:
                 time.sleep(1)
                 continue
+            self.check_reload()
+            next_nodes = self.get_next_nodes(node)
+            if not next_nodes:
+                break
+            q = deque(next_nodes)
+
             # 先执行右侧队尾
-            if self.node_track:
-                self.node_track.pop()
             node = q.pop()
             # todo: 假死报警
             self.node_track.append(node)
+            self.set_node_track()
             logging.info(node.name)
 
             if node.type == schemas.NodeType.job:
-                self.node_track.append(node)
                 Controller(
                     node.job_id, uuid_=self.uuid, node_track=self.node_track
                 ).loop()
@@ -424,10 +453,9 @@ class Controller(Executor):
                         self.delay()
                         continue
 
+            # 执行完毕
             self.log_node(node)
-            next_nodes = self.get_next_nodes(node)
-            q = deque(next_nodes)
-
+            # 执行后延时
             interval = node.delay
             if interval is not None:
                 self.set_timer(interval)

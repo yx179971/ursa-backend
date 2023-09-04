@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import time
 
@@ -12,7 +13,10 @@ except:
 
 
 def get_window(include=conf.window):
-    return next(filter(lambda x: include in x.title, gui.getAllWindows()))
+    try:
+        return next(filter(lambda x: include in x.title, gui.getAllWindows()))
+    except:
+        logging.warning("当前未检测到软件窗口")
 
 
 window = get_window()

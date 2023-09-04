@@ -11,7 +11,7 @@ class CleanService:
         img = set()
         to_delete = set()
         for job in db.query(models.Job).all():
-            for node in job.config.get("cells"):
+            for node in job.config.get("cells", []):
                 data = node.get("data", {})
                 img.add(data.get("locate"))
                 img.add(data.get("target"))

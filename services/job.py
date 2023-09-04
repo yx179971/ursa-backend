@@ -1,4 +1,5 @@
 from collections import Counter
+import hashlib
 import os
 import shutil
 import time
@@ -42,11 +43,6 @@ class JobService:
         return db.query(models.Job).filter(models.Job.id == job_id).first()
 
     @classmethod
-    def _job_checker(cls, job):
-        # todo
-        return job
-
-    @classmethod
     def create_job(cls, job: schemas.JobCreate):
         if db.query(models.Job).filter(models.Job.name == job.name).first():
             raise UrsaException("作业名称已存在")
@@ -57,12 +53,22 @@ class JobService:
         return job
 
     @classmethod
+    def get_job_sig(cls, job):
+        map_list = []
+        for item in job.config.get("cells"):
+            if item["shape"] == "edge":
+                map_list.append((item["source"]["cell"], item["target"]["cell"]))
+        map_list.sort(key=lambda x: x[1])
+        map_list.sort(key=lambda x: x[0])
+        return hashlib.md5(str(map_list).encode("utf-8")).hexdigest()
+
+    @classmethod
     def update_job(cls, job: schemas.Job):
-        job = cls._job_checker(job)
+        map_sig = cls.get_job_sig(job)
         db.execute(
             update(models.Job)
             .where(models.Job.id == job.id)
-            .values(config=job.config, name=job.name)
+            .values(config=job.config, name=job.name, map_signature=map_sig)
         )
         db.commit()
         return cls.get_job(job.id)
@@ -102,6 +108,10 @@ class JobService:
         redis_utils.set_mq("signal", models.MqSignal.pause.name)
 
     @classmethod
+    def continue_(cls, job_id):
+        redis_utils.set_mq("signal", models.MqSignal.running.name)
+
+    @classmethod
     def record_start(cls, job_id, force=False):
         cls.init_mq(force)
         tasks.record_start.delay(job_id)
@@ -119,7 +129,7 @@ class JobService:
         stat = {}
         for job in db.query(models.Job).all():
             stat[job.name] = Counter(
-                ["shape"] == "edge" for d in job.config.get("cells")
+                ["shape"] == "edge" for d in job.config.get("cells", [])
             )[False]
         for k, v in stat.items():
             print(f"{k}: {v}")

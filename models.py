@@ -16,6 +16,7 @@ class MqSignal(Enum):
     running = auto()
     stopping = auto()
     pause = auto()
+    reload = auto()
     cancel = auto()
 
 
@@ -41,6 +42,12 @@ class Job(Base):
     name = Column(String, unique=True, index=True)
     config = Column(JSON, default=dict)
     sort = Column(Integer, default=0)
+    map_signature = Column(String)
+
+    def get(self):
+        return Job(
+            **{k: v for k, v in self.__dict__.items() if k in Job.__mapper__.c.keys()}
+        )
 
 
 class JobLog(Base):
