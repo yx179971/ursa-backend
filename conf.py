@@ -1,4 +1,5 @@
 import os
+import sys
 from typing import Any
 from typing import Dict
 
@@ -10,7 +11,11 @@ from sqlalchemy.orm import sessionmaker
 debug = True
 mq_debug = False
 
-base_dir = os.path.dirname(os.path.abspath(__file__))
+entry = sys.argv[0]
+if entry.endswith("ursa.exe"):
+    base_dir = os.path.dirname(entry)
+else:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
 img_dir = os.path.join(base_dir, "img")
 os.makedirs(img_dir, exist_ok=True)
 data_path = os.path.join(base_dir, "data.json")
@@ -68,10 +73,24 @@ LOGGING_CONFIG: Dict[str, Any] = {
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stdout",
         },
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "default",
+            "filename": "ursa.log",
+            "backupCount": 3,
+        },
     },
     "loggers": {
-        "uvicorn": {"handlers": ["default"], "level": "INFO", "propagate": False},
-        "uvicorn.error": {"level": "INFO"},
-        "uvicorn.access": {"handlers": ["access"], "level": "INFO", "propagate": False},
+        "uvicorn": {
+            "handlers": ["default", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "uvicorn.error": {"level": "INFO", "handlers": ["default", "file"]},
+        "uvicorn.access": {
+            "handlers": ["access", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }

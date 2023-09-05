@@ -13,6 +13,7 @@ class MqSignal(Enum):
     def _generate_next_value_(name, start, count, last_values):
         return name
 
+    ready = auto()
     running = auto()
     stopping = auto()
     pause = auto()

@@ -46,14 +46,7 @@ class Controller(Executor):
         start_node_id="",
     ):
         self.uuid = uuid_ or uuid.uuid4().hex
-        job = db.query(models.Job).filter(models.Job.id == job_id).first().get()
-        self.job = models.Job(
-            **{
-                k: v
-                for k, v in job.__dict__.items()
-                if k in models.Job.__mapper__.c.keys()
-            }
-        )
+        self.job = db.query(models.Job).filter(models.Job.id == job_id).first().get()
         self.start_node_id = start_node_id
         self.nodes, self.edges = self.get_node_config(job_id)
         work_dir = os.path.dirname(os.path.abspath(__file__))
@@ -374,7 +367,7 @@ class Controller(Executor):
         if job.map_signature != self.job.map_signature:
             self.job = job.get()
             self.nodes, self.edges = self.get_node_config(self.job.id)
-        redis_utils.set_mq("signal", models.MqSignal.running)
+        redis_utils.set_mq("signal", models.MqSignal.running.name)
 
     def get_next_nodes(self, node):
         next_nodes = []
@@ -412,18 +405,25 @@ class Controller(Executor):
         )
 
     def loop(self):
-        node = self.get_start_node()
+        node = None
+        q = deque()
 
         while True:
             self.check_signal()
             if not self.window.isActive:
                 time.sleep(1)
                 continue
-            self.check_reload()
-            next_nodes = self.get_next_nodes(node)
-            if not next_nodes:
+
+            if not node:
+                q.extend([self.get_start_node()])
+            else:
+                self.node_track.pop()
+
+            if not q:
+                self.check_reload()
+                q.extend(self.get_next_nodes(node))
+            if not q:
                 break
-            q = deque(next_nodes)
 
             # 先执行右侧队尾
             node = q.pop()
@@ -436,7 +436,6 @@ class Controller(Executor):
                 Controller(
                     node.job_id, uuid_=self.uuid, node_track=self.node_track
                 ).loop()
-                self.node_track.pop()
             elif node.type == schemas.NodeType.operation:
                 self.node_check(node)
                 self.cap()
@@ -455,6 +454,7 @@ class Controller(Executor):
 
             # 执行完毕
             self.log_node(node)
+            q.clear()
             # 执行后延时
             interval = node.delay
             if interval is not None:

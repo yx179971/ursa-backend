@@ -15,6 +15,7 @@ app.conf.worker_log_format = "[%(asctime)s: %(levelname)s/%(processName)s %(file
 
 @signals.worker_ready.connect
 def reset_redis_status(*args, **kwargs):
+    redis_utils.set_mq("signal", models.MqSignal.ready.name)
     redis_utils.set_mq("status", models.MqStatus.stopped.name)
 
 
