@@ -56,7 +56,7 @@ class Controller(Executor):
 
         self.templates = None
         self.screen = None
-        self.window = mq_utils.window
+        self.window = mq_utils.get_window()
         self.custom_accuracy = {}
         # self.stage = ""
 

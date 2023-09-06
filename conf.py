@@ -11,8 +11,14 @@ from sqlalchemy.orm import sessionmaker
 debug = True
 mq_debug = False
 
+front_exe = "Ursa-frontend.exe"
+
+SINGLE_MODE = "single"
+CLUSTER_MODE = "cluster"
+mode = SINGLE_MODE
+
 entry = sys.argv[0]
-if entry.endswith("ursa.exe"):
+if entry.endswith("Ursa.exe"):
     base_dir = os.path.dirname(entry)
 else:
     base_dir = os.path.dirname(os.path.abspath(__file__))

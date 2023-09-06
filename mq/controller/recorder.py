@@ -18,7 +18,7 @@ from .base import Executor
 
 class Recorder(Executor):
     def __init__(self, uuid_=None):
-        self.window = mq_utils.window
+        self.window = mq_utils.get_window()
         self.uuid = uuid_ or uuid.uuid4().hex
         self.img_dir = os.path.join(conf.img_dir, self.uuid)
         os.makedirs(self.img_dir, exist_ok=True)

@@ -34,7 +34,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='ursa.exe',
+    name='Ursa.exe',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

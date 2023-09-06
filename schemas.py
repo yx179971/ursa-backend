@@ -102,6 +102,7 @@ class Mq(BaseModel):
     status: Optional[MqStatus]
     signal: Optional[MqSignal]
     node_track: Optional[str]
+    worker_func: Optional[str]
 
 
 class MqResponse(BaseModel):

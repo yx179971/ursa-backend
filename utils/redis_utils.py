@@ -1,8 +1,13 @@
 import conf
-import redis
 import schemas
 
-r = redis.Redis(host=conf.REDIS_HOST, port=conf.REDIS_PORT, decode_responses=True)
+
+if conf.mode == conf.SINGLE_MODE:
+    r = None
+else:
+    import redis
+
+    r = redis.Redis(host=conf.REDIS_HOST, port=conf.REDIS_PORT, decode_responses=True)
 
 mq_key = "mq"
 
@@ -20,8 +25,14 @@ class Lock:
 
 
 def get_mq():
-    return schemas.Mq(**r.hgetall(mq_key))
+    if conf.mode == conf.SINGLE_MODE:
+        return schemas.Mq(**r)
+    else:
+        return schemas.Mq(**r.hgetall(mq_key))
 
 
 def set_mq(key, value):
-    r.hset(mq_key, key, value)
+    if conf.mode == conf.SINGLE_MODE:
+        r[key] = value
+    else:
+        r.hset(mq_key, key, value)

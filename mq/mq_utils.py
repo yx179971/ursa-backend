@@ -11,15 +11,18 @@ try:
 except:
     pass
 
+window = None
+
 
 def get_window(include=conf.window):
+    global window
+    if window:
+        return window
     try:
-        return next(filter(lambda x: include in x.title, gui.getAllWindows()))
+        window = next(filter(lambda x: include in x.title, gui.getAllWindows()))
     except:
         logging.warning("当前未检测到软件窗口")
-
-
-window = get_window()
+    return window
 
 
 def screen_shot(save_path=""):

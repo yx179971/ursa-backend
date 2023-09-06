@@ -97,7 +97,7 @@ class JobService:
     @classmethod
     def run(cls, job_id, force=False, node_id=""):
         cls.init_mq(force)
-        tasks.job_run.delay(job_id, node_id)
+        tasks.send_job_run(job_id, node_id)
 
     @classmethod
     def stop(cls, job_id):
@@ -114,7 +114,7 @@ class JobService:
     @classmethod
     def record_start(cls, job_id, force=False):
         cls.init_mq(force)
-        tasks.record_start.delay(job_id)
+        tasks.send_record_start(job_id)
 
     @classmethod
     def record_stop(cls):
