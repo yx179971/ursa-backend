@@ -74,6 +74,7 @@ class Node(BaseModel):
     name: str
     enable: bool = True
     action: Optional[Action]
+    click_right: bool = False
     rank: Optional[int]
     exec_count: Optional[int]
     background: Optional[str]

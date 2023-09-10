@@ -5,6 +5,7 @@ import time
 import uuid
 
 import conf
+from conf import db
 import models
 from mq import mq_utils
 from mq.mq_utils import screen_shot
@@ -17,12 +18,14 @@ from .base import Executor
 
 
 class Recorder(Executor):
-    def __init__(self, uuid_=None):
-        self.window = mq_utils.get_window()
+    def __init__(self, job_id, uuid_=None):
+        self.job = db.query(models.Job).filter(models.Job.id == job_id).first().get()
+        self.window = mq_utils.activate_window(self.job.config.get("window"))
         self.uuid = uuid_ or uuid.uuid4().hex
         self.img_dir = os.path.join(conf.img_dir, self.uuid)
         os.makedirs(self.img_dir, exist_ok=True)
         self.click_point = 0, 0
+        self.click_right = False
         self.scroll_up = 0
         self.shot_lock = False
 
@@ -30,7 +33,7 @@ class Recorder(Executor):
         def inner(x, y):
             if not self.shot_lock:
                 self.shot_lock = True
-                screen_shot(img_path)
+                screen_shot(self.window, img_path)
                 return False
 
         return inner
@@ -42,6 +45,10 @@ class Recorder(Executor):
                 y -= self.window.top
                 self.click_point = x, y
                 self.scroll_up = 0
+                if button == mouse.Button.right:
+                    self.click_right = True
+                else:
+                    self.click_right = False
                 return False
 
         return inner
@@ -95,9 +102,13 @@ class Recorder(Executor):
     def trans_to_job(self):
         all_nodes = {}
         for img_name in os.listdir(self.img_dir):
-            num, x, y, scroll_up = re.match(
-                r"record_.*?_(\d+)_(\d+)_(\d+)_(-?\d+).png", img_name
+            num, x, y, action = re.match(
+                r"record_.*?_(\d+)_(\d+)_(\d+)_(.*).png", img_name
             ).groups()
+            try:
+                scroll_up = int(action)
+            except:
+                scroll_up = None
             node = Node(
                 id=str(uuid.uuid4()),
                 name=f"录制节点{num}",
@@ -105,6 +116,7 @@ class Recorder(Executor):
                 background=os.path.join(self.uuid, img_name),
                 action=Action.click_area,
                 scroll_up=scroll_up,
+                click_right=action == "right",
             )
             all_nodes[node.id] = node
 

@@ -10,6 +10,8 @@ from conf import db
 from fastapi import UploadFile
 import models
 from mq import tasks
+from mq.mq_utils import activate_window
+import pyautogui as gui
 import schemas
 from sqlalchemy import update
 from utils import redis_utils
@@ -25,6 +27,10 @@ class JobService:
         with open(des_path, "wb") as f:
             shutil.copyfileobj(file.file, f)
         return file_name
+
+    @classmethod
+    def get_windows(cls):
+        return [x.title for x in gui.getAllWindows() if x.title]
 
     @classmethod
     def get_jobs(cls):
@@ -109,6 +115,10 @@ class JobService:
 
     @classmethod
     def continue_(cls, job_id):
+        job = cls.get_job(job_id)
+        window = job.config.get("window")
+        if window:
+            activate_window(window)
         redis_utils.set_mq("signal", models.MqSignal.running.name)
 
     @classmethod

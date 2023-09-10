@@ -30,7 +30,6 @@ REDIS_HOST = "127.0.0.1"
 # REDIS_HOST = "192.168.31.112"
 REDIS_PORT = 6379
 
-window = "MuMu模拟器"
 accuracy = 0.8
 
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{base_dir}/sql_app.db"

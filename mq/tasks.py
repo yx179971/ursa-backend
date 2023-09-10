@@ -1,4 +1,5 @@
 import time
+import traceback
 
 from celery import Celery
 from celery import signals
@@ -29,9 +30,9 @@ def job_run(job_id, node_id=""):
     redis_utils.set_mq("status", models.MqStatus.stopped.value)
 
 
-def record_start(job_id):
+def record_start(job_id, **kwargs):
     redis_utils.set_mq("job_id", job_id)
-    recorder = Recorder()
+    recorder = Recorder(job_id)
     try:
         recorder.start()
     except BreakException:
@@ -72,15 +73,18 @@ def send_record_start(job_id):
 
 def main():
     while True:
-        worker_func = redis_utils.r.get("worker_func")
-        reset_redis_status()
-        if worker_func:
-            job_id = redis_utils.r["job_id"]
-            node_id = redis_utils.r["node_id"]
-            globals()[worker_func](job_id, node_id)
-            redis_utils.set_mq("worker_func", "")
-        print("worker alive")
-        time.sleep(1)
+        try:
+            worker_func = redis_utils.r.get("worker_func")
+            reset_redis_status()
+            if worker_func:
+                job_id = redis_utils.r["job_id"]
+                node_id = redis_utils.r.get("node_id")
+                globals()[worker_func](job_id, node_id=node_id)
+                redis_utils.set_mq("worker_func", "")
+            print("worker alive")
+            time.sleep(1)
+        except:
+            traceback.print_exc()
 
 
 if __name__ == "__main__":

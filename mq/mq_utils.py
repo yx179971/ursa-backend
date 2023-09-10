@@ -3,7 +3,6 @@ import logging
 import os
 import time
 
-import conf
 import pyautogui as gui
 
 try:
@@ -11,21 +10,30 @@ try:
 except:
     pass
 
-window = None
 
-
-def get_window(include=conf.window):
-    global window
-    if window:
-        return window
+def get_window(include=""):
     try:
         window = next(filter(lambda x: include in x.title, gui.getAllWindows()))
+        return window
     except:
         logging.warning("当前未检测到软件窗口")
+
+
+def activate_window(title):
+    window = get_window(title)
+    if not window:
+        raise Exception("当前未检测到软件窗口")
+    if window.isMinimized:
+        window.restore()
+    elif not window.isActive:
+        window.activate()
+    window = get_window(title)
+    if not window.isActive:
+        raise Exception("激活窗口失败")
     return window
 
 
-def screen_shot(save_path=""):
+def screen_shot(window, save_path=""):
     im = gui.screenshot(region=(window.left, window.top, window.width, window.height))
     if save_path:
         im.save(save_path)

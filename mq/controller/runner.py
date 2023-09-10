@@ -56,7 +56,8 @@ class Controller(Executor):
 
         self.templates = None
         self.screen = None
-        self.window = mq_utils.get_window()
+        self.window = self.init_window()
+        time.sleep(1)
         self.custom_accuracy = {}
         # self.stage = ""
 
@@ -74,6 +75,18 @@ class Controller(Executor):
 
         self.init()
         self.node_track = node_track or []
+
+    def init_window(self):
+        window = mq_utils.activate_window(self.job.config.get("window"))
+        start = self.job.config.get("window_start")
+        wh = self.job.config.get("window_width_height")
+        print(start)
+        print(wh)
+        if start:
+            window.moveTo(*list(map(int, start.split(","))))
+        if wh:
+            window.resizeTo(*list(map(int, wh.split(","))))
+        return window
 
     def get_node_config(self, job_id):
         job = db.query(models.Job).filter(models.Job.id == job_id).first()
@@ -167,7 +180,7 @@ class Controller(Executor):
         #     save_path = os.path.join(self.save_path, img_name)
 
         self.screen = cv2.cvtColor(
-            np.array(mq_utils.screen_shot(save_path)), cv2.COLOR_BGR2RGB
+            np.array(mq_utils.screen_shot(self.window, save_path)), cv2.COLOR_BGR2RGB
         )
         # if self.log_screen_rotate > 0:
         #     self.log_screen.append((save_path, self.screen))
@@ -244,22 +257,23 @@ class Controller(Executor):
         if c_x == 0 and c_y == 0:
             raise Exception("stop by manual")
 
-    def _click(self, x, y, simple=False):
+    def _click(self, x, y, simple=False, right=False):
         logging.debug(f"{x, y}")
         self.stop_check()
         gui.moveTo(x, y)
+        button = right and gui.RIGHT or gui.PRIMARY
         if simple:
-            gui.click(x, y)
+            gui.click(x, y, button=button)
         else:
-            gui.mouseDown(x, y, button=gui.LEFT)
+            gui.mouseDown(x, y, button=button)
             time.sleep(random.uniform(0.05, 0.1))
-            gui.mouseUp(x, y, button=gui.LEFT)
+            gui.mouseUp(x, y, button=button)
 
     def click_current(self, *args, **kwargs):
         x, y = gui.position()
         self._click(x, y, *args, **kwargs)
 
-    def click(self, target, ignore=True, simple=False, sleep=0, rect=None):
+    def click(self, target, ignore=True, simple=False, sleep=0, rect=None, right=False):
         wanted = self.templates[target]
         size = wanted[0].shape
         h, w, _ = size
@@ -269,7 +283,7 @@ class Controller(Executor):
             x, y = self.random_offset(xx, w, h)
             x += self.window.left
             y += self.window.top
-            self._click(x, y, simple)
+            self._click(x, y, simple, right=right)
             self.random_delay()
             if sleep:
                 time.sleep(sleep)
@@ -334,17 +348,17 @@ class Controller(Executor):
         except:
             scroll_up = 0
         if scroll_up == 0:
-            self.click_current()
+            self.click_current(right=node.click_right)
         else:
             gui.scroll(scroll_up * 200)
         return True
 
     def act_click_locate(self, node):
         # todo: 优化二次定位
-        return self.click(node.locate, rect=node.locate_rect)
+        return self.click(node.locate, rect=node.locate_rect, right=node.click_right)
 
     def act_click_target(self, node):
-        return self.click(node.target)
+        return self.click(node.target, right=node.click_right)
 
     def node_check(self, node):
         if not node.locate:

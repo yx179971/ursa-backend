@@ -144,6 +144,11 @@ async def upload_file(file: UploadFile):
     return {"data": {"file_path": file_path}}
 
 
+@app.get("/windows")
+async def get_windows():
+    return {"data": {"windows": JobService.get_windows()}}
+
+
 @app.post("/worker/keepalive")
 async def worker_keepalive():
     return {"success": True}

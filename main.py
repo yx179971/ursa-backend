@@ -5,7 +5,9 @@ from multiprocessing import Manager
 from multiprocessing import Process
 import os.path
 import subprocess
+import sys
 import time
+import traceback
 
 import conf
 from mq import tasks
@@ -15,7 +17,11 @@ import web
 
 def web_server(share_dict):
     redis_utils.r = share_dict
-    web.main()
+    while True:
+        try:
+            web.main()
+        except:
+            traceback.print_exc()
 
 
 def worker(share_dict):
@@ -36,7 +42,11 @@ if __name__ == "__main__":
     worker_process = Process(target=worker, args=(share_dict,), daemon=True)
     web_process.start()
     worker_process.start()
-    front_process = front()
-    while front_process.poll() is None:
-        time.sleep(1)
+    if sys.argv[-1] != "backend":
+        front_process = front()
+        while front_process.poll() is None:
+            time.sleep(1)
+    else:
+        while True:
+            pass
     logging.info("frontend closed")
