@@ -1,3 +1,4 @@
+import logging.config
 import os
 import sys
 from typing import Any
@@ -99,3 +100,6 @@ LOGGING_CONFIG: Dict[str, Any] = {
         },
     },
 }
+
+logging.config.dictConfig(LOGGING_CONFIG)
+logger = logging.getLogger("uvicorn")

@@ -1,6 +1,6 @@
-import logging
 import time
 
+from conf import logger
 import models
 from utils import redis_utils
 from utils.exception import BreakException
@@ -12,7 +12,7 @@ class Executor:
     def check_signal():
         while True:
             signal = redis_utils.get_mq().signal
-            logging.info(f"signal-----------------{signal.name}")
+            logger.info(f"signal-----------------{signal.name}")
             if signal == models.MqSignal.running:
                 redis_utils.set_mq("status", models.MqStatus.running.name)
             elif signal == models.MqSignal.stopping:

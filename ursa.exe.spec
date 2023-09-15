@@ -2,7 +2,6 @@
 from PyInstaller.utils.hooks import collect_submodules
 
 hiddenimports = ['celery.fixups']
-hiddenimports += collect_submodules('PyGetWindow')
 hiddenimports += collect_submodules('celery')
 hiddenimports += collect_submodules('eventlet')
 hiddenimports += collect_submodules('dns')

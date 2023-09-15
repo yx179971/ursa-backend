@@ -1,7 +1,6 @@
 from collections import deque
 import copy
 from datetime import datetime
-import logging
 import os
 import random
 import shutil
@@ -12,6 +11,7 @@ import uuid
 
 import conf
 from conf import db
+from conf import logger
 import cv2
 import models
 from mq import mq_utils
@@ -80,8 +80,8 @@ class Controller(Executor):
         window = mq_utils.activate_window(self.job.config.get("window"))
         start = self.job.config.get("window_start")
         wh = self.job.config.get("window_width_height")
-        print(start)
-        print(wh)
+        logger.info(start)
+        logger.info(wh)
         if start:
             window.moveTo(*list(map(int, start.split(","))))
         if wh:
@@ -242,9 +242,9 @@ class Controller(Executor):
             self.show_window(f"we {'' if loc_pos else 'not'} get", display)
 
         if loc_pos:
-            logging.info(f"Y 已找到目标 {target}")
+            logger.info(f"Y 已找到目标 {target}")
         else:
-            logging.warning(
+            logger.warning(
                 f"N 未找到目标 {target}",
             )
         if loc_pos and double:
@@ -258,7 +258,7 @@ class Controller(Executor):
             raise Exception("stop by manual")
 
     def _click(self, x, y, simple=False, right=False):
-        logging.debug(f"{x, y}")
+        logger.debug(f"{x, y}")
         self.stop_check()
         gui.moveTo(x, y)
         button = right and gui.RIGHT or gui.PRIMARY
@@ -376,12 +376,12 @@ class Controller(Executor):
 
     def check_reload(self):
         job = db.query(models.Job).filter(models.Job.id == self.job.id).first()
-        logging.info(job.map_signature)
-        logging.info(self.job.map_signature)
+        logger.info(job.map_signature)
+        logger.info(self.job.map_signature)
         if job.map_signature != self.job.map_signature:
             self.job = job.get()
             self.nodes, self.edges = self.get_node_config(self.job.id)
-        redis_utils.set_mq("signal", models.MqSignal.running.name)
+            self.templates = self.load_template()
 
     def get_next_nodes(self, node):
         next_nodes = []
@@ -420,6 +420,7 @@ class Controller(Executor):
 
     def loop(self):
         node = None
+        start_node = self.get_start_node()
         q = deque()
 
         while True:
@@ -429,13 +430,15 @@ class Controller(Executor):
                 continue
 
             if not node:
-                q.extend([self.get_start_node()])
+                self.cap()
+                q.extend([start_node])
             else:
                 self.node_track.pop()
 
             if not q:
+                self.cap()
                 self.check_reload()
-                q.extend(self.get_next_nodes(node))
+                q.extend(self.get_next_nodes(start_node))
             if not q:
                 break
 
@@ -444,7 +447,7 @@ class Controller(Executor):
             # todo: 假死报警
             self.node_track.append(node)
             self.set_node_track()
-            logging.info(node.name)
+            logger.info(node.name)
 
             if node.type == schemas.NodeType.job:
                 Controller(
@@ -452,10 +455,8 @@ class Controller(Executor):
                 ).loop()
             elif node.type == schemas.NodeType.operation:
                 self.node_check(node)
-                self.cap()
                 if not self.locate(node.locate, rect=node.locate_rect):
-                    q.appendleft(node)
-                    if len(q) == 1:
+                    if not q:
                         self.delay()
                     continue
 
@@ -469,6 +470,7 @@ class Controller(Executor):
             # 执行完毕
             self.log_node(node)
             q.clear()
+            start_node = node
             # 执行后延时
             interval = node.delay
             if interval is not None:

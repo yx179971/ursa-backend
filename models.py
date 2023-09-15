@@ -17,7 +17,6 @@ class MqSignal(Enum):
     running = auto()
     stopping = auto()
     pause = auto()
-    reload = auto()
     cancel = auto()
 
 

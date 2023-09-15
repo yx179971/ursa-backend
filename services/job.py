@@ -7,6 +7,7 @@ import uuid
 
 import conf
 from conf import db
+from conf import logger
 from fastapi import UploadFile
 import models
 from mq import tasks
@@ -123,6 +124,9 @@ class JobService:
 
     @classmethod
     def record_start(cls, job_id, force=False):
+        job = cls.get_job(job_id)
+        if not job.config.get("window"):
+            raise UrsaException("请先配置目标窗口")
         cls.init_mq(force)
         tasks.send_record_start(job_id)
 
@@ -142,4 +146,4 @@ class JobService:
                 ["shape"] == "edge" for d in job.config.get("cells", [])
             )[False]
         for k, v in stat.items():
-            print(f"{k}: {v}")
+            logger.info(f"{k}: {v}")

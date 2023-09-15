@@ -1,5 +1,4 @@
 import ctypes
-import logging
 from multiprocessing import freeze_support
 from multiprocessing import Manager
 from multiprocessing import Process
@@ -10,6 +9,7 @@ import time
 import traceback
 
 import conf
+from conf import logger
 from mq import tasks
 from utils import redis_utils
 import web
@@ -21,7 +21,7 @@ def web_server(share_dict):
         try:
             web.main()
         except:
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
 
 
 def worker(share_dict):
@@ -49,4 +49,4 @@ if __name__ == "__main__":
     else:
         while True:
             pass
-    logging.info("frontend closed")
+    logger.info("frontend closed")

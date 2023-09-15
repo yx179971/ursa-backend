@@ -1,8 +1,8 @@
 import json
-import logging
 import os
 import time
 
+from conf import logger
 import pyautogui as gui
 
 try:
@@ -16,7 +16,7 @@ def get_window(include=""):
         window = next(filter(lambda x: include in x.title, gui.getAllWindows()))
         return window
     except:
-        logging.warning("当前未检测到软件窗口")
+        logger.warning("当前未检测到软件窗口")
 
 
 def activate_window(title):
@@ -26,7 +26,11 @@ def activate_window(title):
     if window.isMinimized:
         window.restore()
     elif not window.isActive:
-        window.activate()
+        try:
+            window.activate()
+        except:
+            window.minimize()
+            window.restore()
     window = get_window(title)
     if not window.isActive:
         raise Exception("激活窗口失败")
