@@ -173,15 +173,18 @@ class Controller(Executor):
             self.show_window(f"{move_to}", display)
         gui.moveTo(move_to)
 
-    def cap(self):
+    def cap(self, update=True):
         save_path = ""
         # if self.log_screen_rotate != 0:
         #     img_name = f"{datetime.now().strftime('%m_%d_%H_%M_%S')}.png"
         #     save_path = os.path.join(self.save_path, img_name)
 
-        self.screen = cv2.cvtColor(
+        screen = cv2.cvtColor(
             np.array(mq_utils.screen_shot(self.window, save_path)), cv2.COLOR_BGR2RGB
         )
+        if update:
+            self.screen = screen
+        return screen
         # if self.log_screen_rotate > 0:
         #     self.log_screen.append((save_path, self.screen))
 
@@ -383,6 +386,29 @@ class Controller(Executor):
             self.nodes, self.edges = self.get_node_config(self.job.id)
             self.templates = self.load_template()
 
+    def check_frozen(self):
+        screen = self.cap(update=False)
+        if cv2.subtract(screen, self.screen).any():
+            return False
+        return True
+
+    def back_to_init_screen(self):
+        nodes = list(
+            filter(
+                lambda node: node.name == "quit",
+                self.nodes,
+            )
+        )
+        if not nodes:
+            return False
+        node = nodes[0]
+        for i in range(5):
+            action_res = getattr(self, f"act_{node.action.value}")(node)
+            if action_res:
+                break
+            time.sleep(1)
+        return action_res
+
     def get_next_nodes(self, node):
         next_nodes = []
         next_ids = set(
@@ -437,6 +463,13 @@ class Controller(Executor):
 
             if not q:
                 self.cap()
+                if self.check_frozen():
+                    if not self.back_to_init_screen():
+                        mq_utils.alarm(3)
+                        break
+                    node = None
+                    start_node = self.get_start_node()
+                    continue
                 self.check_reload()
                 q.extend(self.get_next_nodes(start_node))
             if not q:
